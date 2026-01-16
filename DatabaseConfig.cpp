@@ -2,6 +2,7 @@
 #include "DatabaseConfig.h"
 #include <fstream>
 #include <filesystem>
+#include <sstream>
 #include <iostream>
 
 DatabaseConfig& DatabaseConfig::getInstance() {
@@ -9,164 +10,268 @@ DatabaseConfig& DatabaseConfig::getInstance() {
     return instance;
 }
 
-bool DatabaseConfig::loadEnvFile(const std::string& path) {
+std::string DatabaseConfig::findConfigFile(const std::string& filename) {
     // Try multiple possible locations
     std::vector<std::string> possiblePaths = {
-        path,                           // Current directory
-        "../" + path,                   // Parent directory
-        "../../" + path,                // Grandparent directory
-        "H:/drogonApp/" + path,         // Absolute project path
-        std::filesystem::current_path().string() + "/" + path
+        filename,                           // Current directory
+        "../" + filename,                   // Parent directory
+        "../../" + filename,                // Grandparent directory
+        "H:/drogonApp/" + filename,         // Absolute project path
+        std::filesystem::current_path().parent_path().string() + "/" + filename
     };
     
-    std::ifstream envFile;
-    std::string foundPath;
-    
     for (const auto& tryPath : possiblePaths) {
-        envFile.open(tryPath);
-        if (envFile.is_open()) {
-            foundPath = tryPath;
-            LOG_INFO << "Found .env file at: " << foundPath;
-            break;
+        if (std::filesystem::exists(tryPath)) {
+            std::cout << "Found config file at: " << tryPath << std::endl;
+            return tryPath;
         }
     }
     
-    if (!envFile.is_open()) {
-        LOG_ERROR << "Could not find .env file. Tried:";
-        for (const auto& tryPath : possiblePaths) {
-            LOG_ERROR << "  - " << tryPath;
-        }
-        LOG_ERROR << "Current directory: " << std::filesystem::current_path();
+    std::cerr << "Could not find " << filename << ". Tried:" << std::endl;
+    for (const auto& tryPath : possiblePaths) {
+        std::cerr << "  - " << tryPath << std::endl;
+    }
+    
+    return "";
+}
+
+bool DatabaseConfig::loadConfigFile(const std::string& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        std::cerr << "Cannot open config file: " << path << std::endl;
         return false;
     }
     
-    // Parse .env file
-    std::string line;
-    while (std::getline(envFile, line)) {
-        // Skip comments and empty lines
-        if (line.empty() || line[0] == '#') continue;
-        
-        // Parse key=value
-        size_t equalsPos = line.find('=');
-        if (equalsPos != std::string::npos) {
-            std::string key = line.substr(0, equalsPos);
-            std::string value = line.substr(equalsPos + 1);
-            
-            // Trim whitespace
-            auto trim = [](std::string& str) {
-                str.erase(0, str.find_first_not_of(" \t\r\n"));
-                str.erase(str.find_last_not_of(" \t\r\n") + 1);
-            };
-            
-            trim(key);
-            trim(value);
-            
-            // Remove quotes if present
-            if (!value.empty() && value.front() == '"' && value.back() == '"') {
-                value = value.substr(1, value.length() - 2);
-            }
-            
-            _envVars[key] = value;
-        }
-    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    file.close();
     
-    envFile.close();
-    
-    // Debug output
-    LOG_INFO << "Loaded " << _envVars.size() << " environment variables";
-    for (const auto& [key, value] : _envVars) {
-        if (key.find("PASS") != std::string::npos || key.find("SECRET") != std::string::npos) {
-            LOG_INFO << "  " << key << ": *******";
-        } else {
-            LOG_INFO << "  " << key << ": " << value;
-        }
-    }
-    
-    return true;
-}
-
-bool DatabaseConfig::createDatabaseClient() {
-    // Check required variables
-    std::vector<std::string> required = {"DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASS"};
-    
-    for (const auto& var : required) {
-        if (_envVars.find(var) == _envVars.end()) {
-            LOG_ERROR << "Missing required environment variable: " << var;
-            return false;
-        }
-    }
-    
-    // Build connection string
-    std::string connString = 
-        "host=" + _envVars["DB_HOST"] + " " +
-        "port=" + _envVars["DB_PORT"] + " " +
-        "dbname=" + _envVars["DB_NAME"] + " " +
-        "user=" + _envVars["DB_USER"] + " " +
-        "password=" + _envVars["DB_PASS"] + " " +
-        "sslmode=require " +
-        "connect_timeout=10";
-    
-    LOG_DEBUG << "Database connection string (password hidden): " 
-              << connString.substr(0, connString.find("password=") + 9) << "*******";
+    std::cout << "Loading configuration from: " << path << std::endl;
     
     try {
-        // Create PostgreSQL client
-        _dbClient = drogon::orm::DbClient::newPgClient(connString, 1);
+        Json::Value config;
+        Json::CharReaderBuilder readerBuilder;
+        std::string errors;
         
-        // Test connection
-        auto result = _dbClient->execSqlSync("SELECT version()");
-        LOG_INFO << "✓ Database connected: PostgreSQL " 
-                 << result[0]["version"].as<std::string>().substr(0, 50);
+        std::istringstream jsonStream(buffer.str());
+        if (!Json::parseFromStream(readerBuilder, jsonStream, &config, &errors)) {
+            std::cerr << "Failed to parse JSON: " << errors << std::endl;
+            return false;
+        }
         
+        // Look for database configuration in different possible keys
+        std::vector<std::string> possibleKeys = {"dbs", "db_clients", "databases"};
+        bool foundDbConfig = false;
+        
+        for (const auto& key : possibleKeys) {
+            if (config.isMember(key) && config[key].isArray()) {
+                std::cout << "Found database configuration under key: " << key << std::endl;
+                if (parseDatabaseConfig(config[key])) {
+                    foundDbConfig = true;
+                    break; // Stop after first successful parse
+                }
+            }
+        }
+        
+        if (!foundDbConfig) {
+            std::cout << "No database configuration found in config.json" << std::endl;
+            std::cout << "Tried keys: dbs, db_clients, databases" << std::endl;
+            // Don't return false here - server can run without DB
+        }
+        
+        _configPath = path;
         return true;
         
     } catch (const std::exception& e) {
-        LOG_ERROR << "Database connection failed: " << e.what();
+        std::cerr << "Error loading config file: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool DatabaseConfig::parseDatabaseConfig(const Json::Value& dbConfig) {
+    if (!dbConfig.isArray()) {
+        std::cerr << "Database config is not an array" << std::endl;
+        return false;
+    }
+    
+    bool success = false;
+    
+    for (const auto& db : dbConfig) {
+        if (!db.isObject()) continue;
+        
+        // Get database name (default to "default" if not specified)
+        std::string name = "default";
+        if (db.isMember("name") && db["name"].isString()) {
+            name = db["name"].asString();
+        }
+        
+        std::cout << "Parsing database config for: " << name << std::endl;
+        
+        if (createDatabaseClient(name, db)) {
+            success = true;
+            
+            // Set as default if it's the first one or explicitly named "default"
+            if (name == "default" || !_defaultClient) {
+                _defaultClient = _dbClients[name];
+            }
+        }
+    }
+    
+    return success;
+}
+
+bool DatabaseConfig::createDatabaseClient(const std::string& name, const Json::Value& config) {
+    try {
+        // Check for required fields
+        if (!config.isMember("rdbms") || !config["rdbms"].isString()) {
+            std::cerr << "Missing or invalid 'rdbms' field for database: " << name << std::endl;
+            return false;
+        }
+        
+        std::string rdbms = config["rdbms"].asString();
+        if (rdbms != "postgresql") {
+            std::cerr << "Unsupported database type: " << rdbms << " for: " << name << std::endl;
+            return false;
+        }
+        
+        // Build connection string
+        std::string connString;
+        
+        // Check if connection_info is provided
+        if (config.isMember("connection_info") && config["connection_info"].isString()) {
+            connString = config["connection_info"].asString();
+        } else {
+            // Build from individual parameters
+            if (!config.isMember("host") || !config.isMember("port") || 
+                !config.isMember("dbname") || !config.isMember("user") || 
+                !config.isMember("passwd")) {
+                std::cerr << "Missing required database parameters for: " << name << std::endl;
+                return false;
+            }
+            
+            connString = 
+                "host=" + config["host"].asString() + " " +
+                "port=" + config["port"].asString() + " " +
+                "dbname=" + config["dbname"].asString() + " " +
+                "user=" + config["user"].asString() + " " +
+                "password=" + config["passwd"].asString();
+            
+            // Add optional parameters
+            if (config.isMember("sslmode") && config["sslmode"].isString()) {
+                connString += " sslmode=" + config["sslmode"].asString();
+            } else {
+                connString += " sslmode=require"; // Default for Aiven
+            }
+        }
+        
+        // Get connection number (default to 1)
+        size_t connectionNum = 1;
+        if (config.isMember("connection_number") && config["connection_number"].isUInt()) {
+            connectionNum = config["connection_number"].asUInt();
+        } else if (config.isMember("number_of_connections") && config["number_of_connections"].isUInt()) {
+            connectionNum = config["number_of_connections"].asUInt();
+        }
+        
+        std::cout << "Creating PostgreSQL client for: " << name << std::endl;
+        std::cout << "Connection string (password hidden): " 
+                  << connString.substr(0, connString.find("password=") + 9) << "*******" << std::endl;
+        
+        #ifdef USE_POSTGRESQL
+            auto client = drogon::orm::DbClient::newPgClient(connString, connectionNum);
+            
+            // Test connection
+            auto result = client->execSqlSync("SELECT version()");
+            std::cout << "✓ Database connected: " << name << " - PostgreSQL " 
+                      << result[0]["version"].as<std::string>().substr(0, 50) << std::endl;
+            
+            _dbClients[name] = client;
+            return true;
+            
+        #else
+            std::cerr << "PostgreSQL support not compiled in!" << std::endl;
+            return false;
+        #endif
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to create database client '" << name << "': " << e.what() << std::endl;
         return false;
     }
 }
 
 bool DatabaseConfig::initialize() {
-    if (_initialized) {
-        LOG_WARN << "Database already initialized";
-        return true;
-    }
-    
-    LOG_INFO << "Initializing database configuration...";
-    
-    // Try to load from .env file
-    if (!loadEnvFile()) {
-        LOG_WARN << "Falling back to system environment variables";
-        
-        auto getEnv = [](const char* name) -> std::string {
-            const char* val = std::getenv(name);
-            return val ? std::string(val) : "";
-        };
-        
-        _envVars["DB_HOST"] = getEnv("DB_HOST");
-        _envVars["DB_PORT"] = getEnv("DB_PORT");
-        _envVars["DB_NAME"] = getEnv("DB_NAME");
-        _envVars["DB_USER"] = getEnv("DB_USER");
-        _envVars["DB_PASS"] = getEnv("DB_PASS");
-    }
-    
-    // Create database client
-    if (createDatabaseClient()) {
-        _initialized = true;
-        LOG_INFO << "Database configuration initialized successfully";
-        return true;
-    }
-    
-    LOG_ERROR << "Database configuration failed";
-    return false;
+    return initialize("config.json");
 }
 
-
+bool DatabaseConfig::initialize(const std::string& configPath) {
+    if (_initialized) {
+        std::cout << "Database already initialized" << std::endl;
+        return true;
+    }
+    
+    std::cout << "Initializing database configuration..." << std::endl;
+    
+    std::string foundPath = configPath;
+    if (configPath == "config.json") {
+        foundPath = findConfigFile();
+        if (foundPath.empty()) {
+            std::cerr << "Cannot find config.json" << std::endl;
+            // Still mark as initialized to avoid repeated errors
+            _initialized = true;
+            return false;
+        }
+    }
+    
+    if (!loadConfigFile(foundPath)) {
+        std::cerr << "Failed to load configuration from: " << foundPath << std::endl;
+        // Still mark as initialized to avoid repeated errors
+        _initialized = true;
+        return false;
+    }
+    
+    if (_dbClients.empty()) {
+        std::cout << "No database clients created (server will run without DB)" << std::endl;
+    } else {
+        std::cout << "Database configuration initialized successfully with " 
+                  << _dbClients.size() << " client(s)" << std::endl;
+    }
+    
+    _initialized = true;
+    return true;
+}
 
 std::shared_ptr<drogon::orm::DbClient> DatabaseConfig::getClient() {
     if (!_initialized) {
-        LOG_ERROR << "Database not initialized. Call initialize() first.";
-        return nullptr;
+        // Auto-initialize if not already initialized
+        std::cout << "Auto-initializing database configuration..." << std::endl;
+        if (!initialize()) {
+            std::cerr << "Auto-initialization failed" << std::endl;
+            return nullptr;
+        }
     }
-    return _dbClient;
+    
+    if (!_defaultClient && !_dbClients.empty()) {
+        // Use the first client if no default is set
+        _defaultClient = _dbClients.begin()->second;
+    }
+    
+    return _defaultClient;
+}
+
+std::shared_ptr<drogon::orm::DbClient> DatabaseConfig::getClient(const std::string& name) {
+    if (!_initialized) {
+        // Auto-initialize if not already initialized
+        std::cout << "Auto-initializing database configuration..." << std::endl;
+        if (!initialize()) {
+            std::cerr << "Auto-initialization failed" << std::endl;
+            return nullptr;
+        }
+    }
+    
+    auto it = _dbClients.find(name);
+    if (it != _dbClients.end()) {
+        return it->second;
+    }
+    
+    std::cout << "Database client not found: " << name << std::endl;
+    return nullptr;
 }

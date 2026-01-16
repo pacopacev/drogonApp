@@ -1,5 +1,5 @@
 {
-  "db_clients": [
+  "dbs": [
     {
       "name": "default",
       "rdbms": "postgresql",
@@ -7,10 +7,14 @@
       "port": 25464,
       "dbname": "defaultdb",
       "user": "avnadmin",
-      "passwd": "AVNS_IONeg4MWBUESkCApRE9",
-      "connection_number": 1,
-      "filename": "",
-      "is_fast": false
+      "passwd": "AVNS_IONeg4MWBUESkCApRE9", 
+      "sslmode": "require"
+    }
+  ],
+  "listeners": [
+    {
+      "address": "0.0.0.0",
+      "port": 8080
     }
   ],
   "app": {

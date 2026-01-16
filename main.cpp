@@ -9,42 +9,71 @@
 using namespace drogon;
 
 int main() {
-
-       // Debug: Check if PostgreSQL is defined
+    // Debug: Check if PostgreSQL is defined
     #ifdef USE_POSTGRESQL
         std::cout << "✓ USE_POSTGRESQL IS DEFINED!" << std::endl;
     #else
         std::cout << "✗ USE_POSTGRESQL IS NOT DEFINED!" << std::endl;
     #endif
 
+    std::cout << "==========================================" << std::endl;
+    std::cout << "Starting Drogon Application" << std::endl;
+    std::cout << "==========================================" << std::endl;
 
-    // Initialize database
+    // ========== INITIALIZE DATABASE FROM CONFIG.JSON ==========
+    std::cout << "\nStep 1: Initializing database..." << std::endl;
+    
+    // Explicitly call initialize() first
     if (!DatabaseConfig::getInstance().initialize()) {
-        LOG_ERROR << "Failed to initialize database. Exiting...";
-        return 1;
+        std::cout << "⚠ Database initialization failed or no database configured" << std::endl;
+        std::cout << "Server will start without database support" << std::endl;
+    } else {
+        std::cout << "✓ Database configuration loaded" << std::endl;
     }
 
+    // ========== TEST DATABASE CONNECTION ==========
+    std::cout << "\nStep 2: Testing database connection..." << std::endl;
+    auto dbClient = DatabaseConfig::getInstance().getClient();
     
+    if (dbClient) {
+        try {
+            auto result = dbClient->execSqlSync("SELECT version()");
+            std::cout << "✓ Database connected: PostgreSQL " 
+                      << result[0]["version"].as<std::string>().substr(0, 60) << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "✗ Database connection test failed: " << e.what() << std::endl;
+            dbClient = nullptr;
+        }
+    } else {
+        std::cout << "⚠ No database client available" << std::endl;
+    }
 
-    #ifdef _WIN32
-        // Windows - working directory is build folder, so go up one level
-        std::string publicPath = "../public";
-    #else
-        std::string publicPath = "../public";
-    #endif
-    
-    std::cout << "Using public path: " << publicPath << "\n";
-    
-    app().setThreadNum(4);
-    app().setLogLevel(trantor::Logger::kInfo);
-    app().addListener("0.0.0.0", 8080);
-    app().setDocumentRoot(publicPath);
+    // Store for use in handlers
+    auto sharedDbClient = dbClient;
 
+    // ========== LOAD DROGON CONFIGURATION ==========
+    std::cout << "\nStep 3: Loading server configuration..." << std::endl;
+    try {
+        std::string configPath = DatabaseConfig::getInstance().getConfigPath();
+        if (!configPath.empty()) {
+            std::cout << "Loading from: " << configPath << std::endl;
+            app().loadConfigFile(configPath);
+            std::cout << "✓ Server configuration loaded" << std::endl;
+        } else {
+            // Fallback: Set up basic configuration
+            app().addListener("0.0.0.0", 8080);
+            std::cout << "✓ Using default configuration (port 8080)" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "⚠ Error loading server config: " << e.what() << std::endl;
+        app().addListener("0.0.0.0", 8080); // Fallback
+        std::cout << "✓ Using fallback configuration (port 8080)" << std::endl;
+    }
+
+    // ========== SETUP ROUTES ==========
+    std::cout << "\nStep 4: Setting up routes..." << std::endl;
     
-    
-    // ========== ROUTE DEFINITIONS ==========
-    
-    // Route 1: Home page - load from views/home.html
+    // Home page
     app().registerHandler("/",
         [](const HttpRequestPtr& req,
            std::function<void(const HttpResponsePtr&)>&& callback) {
@@ -63,7 +92,7 @@ int main() {
         },
         {Get});
 
-    //Login page
+    // Login page
     app().registerHandler("/login",
         [](const HttpRequestPtr& req,
            std::function<void(const HttpResponsePtr&)>&& callback) {
@@ -81,93 +110,47 @@ int main() {
             }
         },
         {Get});
-    
-    // Route 2: Simple JSON API
-    app().registerHandler("/api/hello",
-        [](const HttpRequestPtr& req,
-           std::function<void(const HttpResponsePtr&)>&& callback) {
-            Json::Value json;
-            json["message"] = "Hello from Drogon Web Server!";
-            json["status"] = "success";
-            json["framework"] = "Drogon";
-            json["language"] = "C++";
-            json["version"] = "1.9.11";
-            json["timestamp"] = trantor::Date::now().toFormattedString(false);
-            
-            auto resp = HttpResponse::newHttpJsonResponse(json);
-            callback(resp);
-        },
-        {Get});
-    
-    // Route 3: Greeting - load from views/greet.html with template substitution
-    app().registerHandler("/greet/{name}",
-        [](const HttpRequestPtr& req,
-           std::function<void(const HttpResponsePtr&)>&& callback,
-           const std::string& name) {
-            
-            try {
-                std::string html = ViewLoader::loadViewWithData("greet", "NAME", name);
-                auto resp = HttpResponse::newHttpResponse();
-                resp->setContentTypeCode(CT_TEXT_HTML);
-                resp->setBody(html);
-                callback(resp);
-            } catch (const std::exception& e) {
-                auto resp = HttpResponse::newHttpResponse();
-                resp->setStatusCode(k404NotFound);
-                resp->setBody("Error: " + std::string(e.what()));
-                callback(resp);
-            }
-        },
-        {Get});
-    
-    // Route 4: Health check endpoint
+
+    // Health check
     app().registerHandler("/health",
-        [](const HttpRequestPtr& req,
+        [sharedDbClient](const HttpRequestPtr& req,
            std::function<void(const HttpResponsePtr&)>&& callback) {
             Json::Value json;
-            json["status"] = "healthy";
+            json["status"] = "ok";
             json["service"] = "Drogon Web Server";
-            json["version"] = "1.9.11";
-            json["timestamp"] = trantor::Date::now().toFormattedString(false);
+            
+            if (sharedDbClient) {
+                json["database"] = "configured";
+                try {
+                    auto result = sharedDbClient->execSqlSync("SELECT 1 as test");
+                    json["database_test"] = "passed";
+                } catch (const std::exception& e) {
+                    json["database_test"] = "failed";
+                    json["database_error"] = e.what();
+                }
+            } else {
+                json["database"] = "not_configured";
+            }
             
             auto resp = HttpResponse::newHttpJsonResponse(json);
             callback(resp);
         },
         {Get});
-    
-    // Route 5: Simple HTML page (fallback)
-    app().registerHandler("/simple",
-        [](const HttpRequestPtr& req,
-           std::function<void(const HttpResponsePtr&)>&& callback) {
-            auto resp = HttpResponse::newHttpResponse();
-            resp->setContentTypeCode(CT_TEXT_HTML);
-            resp->setBody(R"(<!DOCTYPE html>
-<html>
-<head><title>Simple Page</title></head>
-<body>
-    <h1>Simple HTML Page</h1>
-    <p>This page doesn't use CSP templates.</p>
-    <p><a href="/">Back to Home</a></p>
-</body>
-</html>)");
-            callback(resp);
-        },
-        {Get});
-    
+
+    std::cout << "✓ Routes configured" << std::endl;
+
     // ========== START SERVER ==========
+    std::cout << "\n" << std::string(60, '=') << std::endl;
+    std::cout << "      DROGON WEB SERVER v1.9.11" << std::endl;
+    std::cout << std::string(60, '=') << std::endl;
+    std::cout << "Server running on http://localhost:8080" << std::endl;
+    std::cout << "Database: " << (dbClient ? "Connected ✓" : "Not available") << std::endl;
+    std::cout << "Health check: http://localhost:8080/health" << std::endl;
+    std::cout << "Press Ctrl+C to stop" << std::endl;
+    std::cout << std::string(60, '=') << "\n" << std::endl;
     
-    std::cout << "\n" << std::string(60, '=') << "\n";
-    std::cout << "      DROGON WEB SERVER v1.9.11\n";
-    std::cout << std::string(60, '=') << "\n";
-    std::cout << "Server running on http://localhost:8080\n";
-    std::cout << "Press Ctrl+C to stop.\n";
-    std::cout << std::string(60, '=') << "\n\n";
-    
-    drogon::app()
-        .setThreadNum(4)
-        .setLogLevel(trantor::Logger::kInfo)
-        .enableSession()
-        .run();
+    // Run the application
+    app().run();
     
     return 0;
 }

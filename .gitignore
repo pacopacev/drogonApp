@@ -39,3 +39,13 @@
 
 # debug information files
 *.dwo
+
+
+build/
+*.db
+*.sqlite
+.env
+*.log
+logs/
+
+#config.json

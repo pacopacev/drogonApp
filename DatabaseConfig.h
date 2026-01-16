@@ -4,33 +4,50 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <vector>
 
 class DatabaseConfig {
 public:
     // Singleton instance
     static DatabaseConfig& getInstance();
     
-    // Initialize database connection
+    // Initialize database connection from config.json
     bool initialize();
+    
+    // Initialize from specific config file path
+    bool initialize(const std::string& configPath);
     
     // Get database client
     std::shared_ptr<drogon::orm::DbClient> getClient();
     
+    // Get database client by name
+    std::shared_ptr<drogon::orm::DbClient> getClient(const std::string& name);
+    
     // Check if initialized
     bool isInitialized() const { return _initialized; }
     
+    // Get config file path
+    std::string getConfigPath() const { return _configPath; }
+    
 private:
-    DatabaseConfig() = default;  // Private constructor
+    DatabaseConfig() = default;
     DatabaseConfig(const DatabaseConfig&) = delete;
     DatabaseConfig& operator=(const DatabaseConfig&) = delete;
     
-    // Load environment variables from .env file
-    bool loadEnvFile(const std::string& path = ".env");
+    // Find config.json in various locations
+    std::string findConfigFile(const std::string& filename = "config.json");
     
-    // Create database client from loaded config
-    bool createDatabaseClient();
+    // Load configuration from JSON file
+    bool loadConfigFile(const std::string& path);
     
-    std::map<std::string, std::string> _envVars;
-    std::shared_ptr<drogon::orm::DbClient> _dbClient;
+    // Parse database configuration from JSON
+    bool parseDatabaseConfig(const Json::Value& dbConfig);
+    
+    // Create database client from configuration
+    bool createDatabaseClient(const std::string& name, const Json::Value& config);
+    
+    std::string _configPath;
+    std::map<std::string, std::shared_ptr<drogon::orm::DbClient>> _dbClients;
+    std::shared_ptr<drogon::orm::DbClient> _defaultClient;
     bool _initialized = false;
 };
