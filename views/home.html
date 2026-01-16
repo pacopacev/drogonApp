@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drogon Web Server v1.9.11</title>
+    <!-- Use absolute paths starting with / -->
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 60vh;
+            padding: 80px 0;
+            color: white;
+        }
+        .feature-card {
+            transition: transform 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .api-endpoint {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-lightning-charge me-2"></i>
+                Drogon Server
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">
+                            <i class="bi bi-house"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/login">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/api/hello">
+                            <i class="bi bi-code-slash"></i> API
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/health">
+                            <i class="bi bi-heart-pulse"></i> Health
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="display-4 fw-bold mb-3">
+                        <i class="bi bi-lightning-charge"></i> Drogon Web Server
+                    </h1>
+                    <p class="lead mb-4">
+                        High-performance C++ web framework with Bootstrap 5
+                    </p>
+                    <div class="d-flex gap-3">
+                        <a href="/api/hello" class="btn btn-light btn-lg">
+                            <i class="bi bi-play-circle me-2"></i> Test API
+                        </a>
+                        <a href="#endpoints" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-list-ul me-2"></i> View Endpoints
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card bg-dark bg-opacity-50 text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-server me-2"></i>Server Status
+                            </h5>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Status:</span>
+                                <span class="badge bg-success">Online</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Version:</span>
+                                <span class="text-muted">1.9.11</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Port:</span>
+                                <span class="text-muted">8080</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- API Endpoints -->
+    <section class="py-5" id="endpoints">
+        <div class="container">
+            <h2 class="text-center mb-4">API Endpoints</h2>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100 feature-card">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">
+                                <i class="bi bi-chat-left-text me-2"></i>Greeting API
+                            </h5>
+                            <div class="api-endpoint">GET /api/hello</div>
+                            <p class="card-text">Returns a JSON greeting message from the server.</p>
+                            <a href="/api/hello" class="btn btn-primary">Try It</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 feature-card">
+                        <div class="card-body">
+                            <h5 class="card-title text-success">
+                                <i class="bi bi-heart-pulse me-2"></i>Health Check
+                            </h5>
+                            <div class="api-endpoint">GET /health</div>
+                            <p class="card-text">Check the server's health status and uptime.</p>
+                            <a href="/health" class="btn btn-success">Check Health</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 feature-card">
+                        <div class="card-body">
+                            <h5 class="card-title text-warning">
+                                <i class="bi bi-person-badge me-2"></i>Personal Greeting
+                            </h5>
+                            <div class="api-endpoint">GET /greet/{name}</div>
+                            <p class="card-text">Get a personalized greeting by providing a name.</p>
+                            <a href="/greet/Visitor" class="btn btn-warning">Say Hello</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 feature-card">
+                        <div class="card-body">
+                            <h5 class="card-title text-info">
+                                <i class="bi bi-calculator me-2"></i>Calculator
+                            </h5>
+                            <div class="api-endpoint">GET /calc/add?a=10&b=20</div>
+                            <p class="card-text">Simple addition calculator API endpoint.</p>
+                            <a href="/calc/add?a=15&b=25" class="btn btn-info">Calculate</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Test -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <h2 class="text-center mb-4">Quick Test</h2>
+            <div class="row">
+                <div class="col-lg-6">
+                    <h4>Using Browser:</h4>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <a href="/api/hello" class="text-decoration-none">/api/hello</a> - JSON API test
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <a href="/health" class="text-decoration-none">/health</a> - Health check
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            <a href="/greet/YourName" class="text-decoration-none">/greet/YourName</a> - Personalized greeting
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-lg-6">
+                    <h4>Using curl:</h4>
+                    <pre class="bg-dark text-white p-3 rounded"><code># Test JSON API
+curl http://localhost:8080/api/hello
+
+# Test health check
+curl http://localhost:8080/health
+
+# Test with parameters
+curl "http://localhost:8080/calc/add?a=10&b=20"
+
+# Test POST request
+curl -X POST http://localhost:8080/api/echo \
+  -H "Content-Type: application/json" \
+  -d '{"test": "data"}'</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5><i class="bi bi-lightning-charge me-2"></i> Drogon Web Server</h5>
+                    <p class="mb-0">High-performance C++ web framework</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0">
+                        <span class="text-muted">v1.9.11</span> | 
+                        <span class="text-muted">Bootstrap 5.3.2</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Add active class to current page in navbar
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPage = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPage) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+            
+            // Simple animation for cards
+            const cards = document.querySelectorAll('.feature-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)';
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.boxShadow = '';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

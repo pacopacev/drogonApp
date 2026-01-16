@@ -1,0 +1,71 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Drogon",
+            "type": "shell",
+            "command": "cmake --build build --config Release",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$msCompile"],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Clean & Build",
+            "type": "shell",
+            "command": "cd ${workspaceFolder} && if exist build rmdir /s /q build && mkdir build && cd build && cmake .. -DCMAKE_TOOLCHAIN_FILE=\"H:/vcpkg/scripts/buildsystems/vcpkg.cmake\" -G \"Visual Studio 17 2022\" -A x64 && cmake --build . --config Release",
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Run Server",
+            "type": "shell",
+            "command": "${workspaceFolder}/build/Release/DrogonApp.exe",
+            "group": "test",
+            "dependsOn": ["Build Drogon"],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Build & Run",
+            "type": "shell",
+            "command": "cd ${workspaceFolder} && cmake --build build --config Release && build/Release/DrogonApp.exe",
+            "group": "test",
+            "dependsOn": [],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Test Endpoints",
+            "type": "shell",
+            "command": "curl http://localhost:8080/api/hello",
+            "group": "test"
+        },
+        {
+            "label": "Open in Browser",
+            "type": "shell",
+            "command": "start http://localhost:8080",
+            "group": "test"
+        }
+    ]
+}

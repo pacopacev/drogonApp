@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/bootstrap-icons.css" rel="stylesheet">
+    <title>Login</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h3 { color: #333; }
+        .greeting {
+            font-size: 1.5em;
+            color: #667eea;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        a { color: #667eea; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h3>Welcome to the Login Page</h3>
+        <div class="greeting">
+
+            <form id="loginForm" action="/login" method="post">
+                <label for="username">Username:</label><br>
+                <input type="text" id="username" name="username" required><br><br>
+                <label for="password">Password:</label><br>
+                <input type="password" id="password" name="password" required><br><br>
+                <button class="btn btn-success" type="submit" title="Login">Login
+                </button>
+            </form>
+        <p class="mt-3"><a href="/">← Back to Home</a></p>
+        <div id="errorMessage" class="alert alert-danger mt-3 d-none"></div>
+   
+        </div>
+        </div>  
+        <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Login successful, redirect to home
+                    window.location.href = '/dashboard';
+                } else {
+                    // Show error
+                    document.getElementById('errorMessage').textContent = data.error;
+                    document.getElementById('errorMessage').classList.remove('d-none');
+                }
+            } catch (error) {
+                console.log(error);
+                document.getElementById('errorMessage').textContent = 'Network error';
+                document.getElementById('errorMessage').classList.remove('d-none');
+            }
+        });
+    </script>
+</body>
+</html>

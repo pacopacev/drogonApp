@@ -1,0 +1,10 @@
+^H:\DROGONAPP\BUILD\CMAKEFILES\C9715FF9A8419EA8A57BF90A2394586C\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SH:/drogonApp -BH:/drogonApp/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file H:/drogonApp/build/DrogonApp.slnx
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

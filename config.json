@@ -1,0 +1,33 @@
+{
+  "db_clients": [
+    {
+      "name": "default",
+      "rdbms": "postgresql",
+      "host": "pa-pgdimitrov-bfdb.j.aivencloud.com",
+      "port": 25464,
+      "dbname": "defaultdb",
+      "user": "avnadmin",
+      "passwd": "AVNS_IONeg4MWBUESkCApRE9",
+      "connection_number": 1,
+      "filename": "",
+      "is_fast": false
+    }
+  ],
+  "app": {
+    "threads_num": 4,
+    "enable_session": true,
+    "session_timeout": 1800,
+    "document_root": "./public",
+    "upload_path": "./uploads",
+    "run_as_daemon": false
+  },
+  "ssl": {
+    "cert": "",
+    "key": ""
+  },
+  "log": {
+    "log_path": "./",
+    "logfile_base_name": "drogon",
+    "log_level": "info"
+  }
+}

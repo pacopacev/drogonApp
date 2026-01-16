@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="H:\drogonApp\build\CMakeFiles\c9715ff9a8419ea8a57bf90a2394586c\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{77FE8697-E55E-3607-986C-760AFE2366CD}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

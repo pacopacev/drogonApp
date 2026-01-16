@@ -1,0 +1,47 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Greeting</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 { color: #333; }
+        .greeting {
+            font-size: 1.5em;
+            color: #667eea;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>👋 Greetings!</h1>
+        <div class="greeting">
+            Hello, <strong><%= get("name") %></strong>!
+        </div>
+        <p>Welcome to Drogon Web Server</p>
+        <p><a href="/">← Back to Home</a></p>
+        <p style="color: #666; font-size: 0.9em;">
+            Generated: <%= get("time") %>
+        </p>
+    </div>
+</body>
+</html>

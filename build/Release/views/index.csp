@@ -1,0 +1,35 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title><%= get("title") %></title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        h1 { color: #3498db; }
+        .info-box { background: #f0f8ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .endpoint { margin: 10px 0; padding: 10px; background: #f9f9f9; }
+    </style>
+</head>
+<body>
+    <h1><%= get("title") %></h1>
+    
+    <div class="info-box">
+        <p><strong>Version:</strong> <%= get("version") %></p>
+        <p><strong>Server Time:</strong> <%= get("serverTime") %></p>
+        <p><strong>Status:</strong> <span style="color: green;">● Running</span></p>
+    </div>
+    
+    <h2>Available Endpoints:</h2>
+    <div class="endpoint"><strong>GET</strong> <a href="/api/hello">/api/hello</a> - JSON API</div>
+    <div class="endpoint"><strong>GET</strong> <a href="/greet/Visitor">/greet/{name}</a> - Greeting</div>
+    <div class="endpoint"><strong>GET</strong> <a href="/health">/health</a> - Health check</div>
+    <div class="endpoint"><strong>GET</strong> <a href="/simple">/simple</a> - Simple HTML (fallback)</div>
+    
+    <h2>Test with curl:</h2>
+    <pre>curl http://localhost:8080/api/hello</pre>
+    
+    <p style="margin-top: 30px; color: #666;">
+        This page is rendered using Drogon CSP templates!
+    </p>
+</body>
+</html>
