@@ -1,10 +1,12 @@
 #include <drogon/drogon.h>
+#include "drogon/HttpResponse.h"
 #include <string>
 #include <iostream>
 #include "ViewLoader.h"
 #include "DatabaseConfig.h"
 #include "controllers/AuthController.h"
 #include "filters/AuthFilter.h"
+#include "models/User.h"
 
 using namespace drogon;
 
@@ -98,6 +100,25 @@ int main() {
            std::function<void(const HttpResponsePtr&)>&& callback) {
             try {
                 std::string html = ViewLoader::loadView("login");
+                auto resp = HttpResponse::newHttpResponse();
+                resp->setContentTypeCode(CT_TEXT_HTML);
+                resp->setBody(html);
+                callback(resp);
+            } catch (const std::exception& e) {
+                auto resp = HttpResponse::newHttpResponse();
+                resp->setStatusCode(k404NotFound);
+                resp->setBody("Error: " + std::string(e.what()));
+                callback(resp);
+            }
+        },
+        {Get});
+
+    // Register page
+    app().registerHandler("/register",
+        [](const HttpRequestPtr& req,
+           std::function<void(const HttpResponsePtr&)>&& callback) {
+            try {
+                std::string html = ViewLoader::loadView("register");
                 auto resp = HttpResponse::newHttpResponse();
                 resp->setContentTypeCode(CT_TEXT_HTML);
                 resp->setBody(html);

@@ -2,6 +2,9 @@
 #include <drogon/orm/DbClient.h>
 #include <drogon/utils/Utilities.h>
 #include "DatabaseConfig.h"
+#include <bcrypt/BCrypt.hpp>
+#include <iostream>
+
 
 using namespace drogon;
 using namespace drogon::orm;
@@ -24,6 +27,8 @@ void AuthController::asyncHandleHttpRequest(
     
     // REGISTER
     if (req->getPath() == "/api/register") {
+        // std::cout << "Register endpoint hit\n" << std::endl;
+        // std::cout << "JSON: " << json->toStyledString() << std::endl;
         if (!json || !json->isMember("username") || 
             !json->isMember("email") || !json->isMember("password")) {
             Json::Value respJson;
@@ -39,16 +44,41 @@ void AuthController::asyncHandleHttpRequest(
         std::string password = (*json)["password"].asString();
         
         // SIMPLIFY: Use SHA256 for now
-        std::string passwordHash = drogon::utils::getSha256(password);
+        // std::string passwordHash = drogon::utils::getSha256(password);
+        // Use BCrypt.hpp C++ wrapper
+        std::string passwordHash;
+        try {
+            passwordHash = BCrypt::generateHash(password);
+            std::cout << "Hash: " << passwordHash << std::endl;
+            
+            // Test the hash
+            bool valid = BCrypt::validatePassword(password, passwordHash);
+            std::cout << "\"" << password << "\" : " << (valid ? "valid" : "invalid") << std::endl;
+            
+            bool wrong = BCrypt::validatePassword("wrong", passwordHash);
+            std::cout << "\"wrong\" : " << (wrong ? "valid" : "invalid") << std::endl;
+            
+        } catch (const std::exception& e) {
+            Json::Value respJson;
+            respJson["error"] = std::string("Password hashing failed: ") + e.what();
+            auto resp = HttpResponse::newHttpJsonResponse(respJson);
+            resp->setStatusCode(k500InternalServerError);
+            callback(resp);
+            return;
+        }
+        
         
         dbClient->execSqlAsync(
-            "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id",
+            "INSERT INTO users_drogon (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id",
             [callback](const Result& r) {
                 if (!r.empty()) {
                     Json::Value respJson;
                     respJson["success"] = true;
                     respJson["message"] = "User created successfully";
                     auto resp = HttpResponse::newHttpJsonResponse(respJson);
+                    std::cout << "User created successfully" << std::endl;
+                    std::cout << "New User ID: " << r[0]["id"].as<int>() << std::endl;
+                    std::cout << respJson.toStyledString() << std::endl; 
                     callback(resp);
                 }
             },
@@ -78,7 +108,7 @@ void AuthController::asyncHandleHttpRequest(
         std::string password = (*json)["password"].asString();
         
         dbClient->execSqlAsync(
-            "SELECT id, username, email, password_hash FROM users WHERE username = $1 OR email = $1",
+            "SELECT id, username, email, password_hash FROM users_drogon WHERE username = $1 OR email = $1",
             [password, callback, req](const Result& r) {
                 if (r.empty()) {
                     Json::Value respJson;
