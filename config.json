@@ -18,12 +18,19 @@
     }
   ],
   "app": {
+    "document_root": "./public",
     "threads_num": 4,
     "enable_session": true,
     "session_timeout": 1800,
-    "document_root": "./public",
     "upload_path": "./uploads",
-    "run_as_daemon": false
+    "run_as_daemon": false,
+    "client_max_body_size": 10485760,
+    "client_max_memory_body_size": 10485760,
+    "use_sendfile": true,
+    "static_files_cache_time": 3600,
+    "idle_connection_timeout": 60,
+    "enable_gzip": true,
+    "gzip_static": true
   },
   "ssl": {
     "cert": "",
@@ -33,5 +40,35 @@
     "log_path": "./",
     "logfile_base_name": "drogon",
     "log_level": "info"
-  }
+  },
+  "static_files": [
+    {
+      "path_prefix": "/",
+      "default_cache_control": "public, max-age=86400",
+      "gzip": true,
+      "brotli": false,
+      "headers": {
+        "X-Powered-By": "Drogon"
+      }
+    }
+  ],
+   "static_file_headers": {
+    "css": "text/css; charset=utf-8",
+    "js": "application/javascript; charset=utf-8",
+    "html": "text/html; charset=utf-8",
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "gif": "image/gif",
+    "svg": "image/svg+xml",
+    "ico": "image/x-icon",
+    "woff2": "font/woff2",
+    "woff": "font/woff",
+    "ttf": "font/ttf",
+    "eot": "application/vnd.ms-fontobject",
+    "json": "application/json",
+    "xml": "application/xml",
+    "txt": "text/plain"
+  },
+  "plugins": []
 }

@@ -2,12 +2,31 @@
 #include <drogon/orm/DbClient.h>
 #include <drogon/utils/Utilities.h>
 #include "DatabaseConfig.h"
-#include <bcrypt/BCrypt.hpp>
+// #include <bcrypt/BCrypt.hpp>
 #include <iostream>
 
 
 using namespace drogon;
 using namespace drogon::orm;
+
+
+#include <random>
+#include <sstream>
+#include <iomanip>
+
+// Helper function to generate random hex token
+std::string generateToken() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 255);
+    
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0');
+    for (int i = 0; i < 32; ++i) {
+        ss << std::setw(2) << dis(gen);
+    }
+    return ss.str();
+}
 
 void AuthController::asyncHandleHttpRequest(
     const HttpRequestPtr& req,
@@ -16,6 +35,9 @@ void AuthController::asyncHandleHttpRequest(
     auto json = req->getJsonObject();
     auto dbClient = DatabaseConfig::getInstance().getClient();
     
+    auto path = req->path();
+    auto session = req->getSession();
+
     if (!dbClient) {
         Json::Value respJson;
         respJson["error"] = "Database not available";
@@ -24,9 +46,19 @@ void AuthController::asyncHandleHttpRequest(
         callback(resp);
         return;
     }
-    
+    if (path == "/api/dashboard") {
+        // Handle dashboard API endpoint
+        // You can add authentication check here
+        Json::Value json;
+        json["message"] = "Dashboard API endpoint";
+        json["status"] = "success";
+        json["timestamp"] = std::to_string(time(nullptr));
+        
+        auto resp = HttpResponse::newHttpJsonResponse(json);
+        callback(resp);
+    }
     // REGISTER
-    if (req->getPath() == "/api/register") {
+    else if (path == "/api/register") {
         // std::cout << "Register endpoint hit\n" << std::endl;
         // std::cout << "JSON: " << json->toStyledString() << std::endl;
         if (!json || !json->isMember("username") || 
@@ -42,30 +74,33 @@ void AuthController::asyncHandleHttpRequest(
         std::string username = (*json)["username"].asString();
         std::string email = (*json)["email"].asString();
         std::string password = (*json)["password"].asString();
+        std::string salt = drogon::utils::getUuid();
+        // std::cout << "Generated salt: " << salt << std::endl;
         
         // SIMPLIFY: Use SHA256 for now
-        // std::string passwordHash = drogon::utils::getSha256(password);
-        // Use BCrypt.hpp C++ wrapper
-        std::string passwordHash;
-        try {
-            passwordHash = BCrypt::generateHash(password);
-            std::cout << "Hash: " << passwordHash << std::endl;
+        std::string passwordHash = drogon::utils::getSha256(password);
+        // std::string saltedPassword = password + salt;
+        // // Use BCrypt.hpp C++ wrapper
+        // std::string passwordHash;
+        // try {
+        //     passwordHash = BCrypt::generateHash(password);
+        //     std::cout << "Hash: " << passwordHash << std::endl;
             
-            // Test the hash
-            bool valid = BCrypt::validatePassword(password, passwordHash);
-            std::cout << "\"" << password << "\" : " << (valid ? "valid" : "invalid") << std::endl;
+        //     // Test the hash
+        //     bool valid = BCrypt::validatePassword(password, passwordHash);
+        //     std::cout << "\"" << password << "\" : " << (valid ? "valid" : "invalid") << std::endl;
             
-            bool wrong = BCrypt::validatePassword("wrong", passwordHash);
-            std::cout << "\"wrong\" : " << (wrong ? "valid" : "invalid") << std::endl;
+        //     bool wrong = BCrypt::validatePassword("wrong", passwordHash);
+        //     std::cout << "\"wrong\" : " << (wrong ? "valid" : "invalid") << std::endl;
             
-        } catch (const std::exception& e) {
-            Json::Value respJson;
-            respJson["error"] = std::string("Password hashing failed: ") + e.what();
-            auto resp = HttpResponse::newHttpJsonResponse(respJson);
-            resp->setStatusCode(k500InternalServerError);
-            callback(resp);
-            return;
-        }
+        // } catch (const std::exception& e) {
+        //     Json::Value respJson;
+        //     respJson["error"] = std::string("Password hashing failed: ") + e.what();
+        //     auto resp = HttpResponse::newHttpJsonResponse(respJson);
+        //     resp->setStatusCode(k500InternalServerError);
+        //     callback(resp);
+        //     return;
+        // }
         
         
         dbClient->execSqlAsync(
@@ -94,7 +129,7 @@ void AuthController::asyncHandleHttpRequest(
     }
     
     // LOGIN
-    else if (req->getPath() == "/api/login") {
+    else if (path == "/api/login") {
         if (!json || !json->isMember("username") || !json->isMember("password")) {
             Json::Value respJson;
             respJson["error"] = "Missing username or password";
@@ -122,15 +157,19 @@ void AuthController::asyncHandleHttpRequest(
                 std::string storedHash = r[0]["password_hash"].as<std::string>();
                 
                 // SIMPLIFY: Use SHA256 for now
+                // std::cout << "Stored hash: " << drogon::utils::getSha256(password) << std::endl;
                 bool isValid = (drogon::utils::getSha256(password) == storedHash);
                 
                 if (isValid) {
                     auto session = req->session();
                     session->insert("user_id", r[0]["id"].as<int>());
                     session->insert("username", r[0]["username"].as<std::string>());
+
+                    std::string token = generateToken();
                     
                     Json::Value respJson;
                     respJson["success"] = true;
+                    respJson["token"] = token;
                     Json::Value userJson;
                     userJson["id"] = r[0]["id"].as<int>();
                     userJson["username"] = r[0]["username"].as<std::string>();
@@ -159,9 +198,14 @@ void AuthController::asyncHandleHttpRequest(
     }
     
     // LOGOUT
-    else if (req->getPath() == "/api/logout") {
-        req->session()->erase("user_id");
-        req->session()->erase("username");
+    else if (path == "/api/logout") {
+
+        if(session->find("user_id")){
+            session->erase("user_id");    
+            session->erase("username");
+            session->erase("email");
+        }
+        
         
         Json::Value respJson;
         respJson["success"] = true;
@@ -171,7 +215,7 @@ void AuthController::asyncHandleHttpRequest(
     }
     
     // GET CURRENT USER
-    else if (req->getPath() == "/api/me") {
+    else if (path == "/api/me") {
         auto session = req->session();
         if (!session || !session->find("user_id")) {
             Json::Value respJson;

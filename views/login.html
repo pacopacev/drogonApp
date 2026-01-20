@@ -52,36 +52,95 @@
    
         </div>
         </div>  
-        <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+    <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        
+        // Basic validation
+        if (!username || !password) {
+            document.getElementById('errorMessage').textContent = 'Please fill in all fields';
+            document.getElementById('errorMessage').classList.remove('d-none');
+            return;
+        }
+        
+        // Clear previous errors
+        const errorElement = document.getElementById('errorMessage');
+        errorElement.classList.add('d-none');
+        
+        // Show loading state
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Logging in...';
+        submitBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
             
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    // Login successful, redirect to home
-                    window.location.href = '/dashboard';
-                } else {
-                    // Show error
-                    document.getElementById('errorMessage').textContent = data.error;
-                    document.getElementById('errorMessage').classList.remove('d-none');
-                }
-            } catch (error) {
-                console.log(error);
-                document.getElementById('errorMessage').textContent = 'Network error';
-                document.getElementById('errorMessage').classList.remove('d-none');
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned non-JSON response');
             }
-        });
-    </script>
+            
+            const data = await response.json();
+            console.log('Login response:', data);
+            
+            if (response.ok && (data.success === true && data.token)) {
+                // Login successful
+                // Optionally store token in localStorage
+                if (data.token) {
+                    localStorage.setItem('auth_token', data.token);
+                    sessionStorage.setItem('auth_token', data.token);
+                }
+                
+                if (data.user) {
+                    localStorage.setItem('user_data', JSON.stringify(data.user));
+                    sessionStorage.setItem('user_data', JSON.stringify(data.user));
+                }
+                
+                // Redirect to dashboard
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 300);
+            } else {
+                // Show error from server
+                const errorMsg = data.error || data.message || `Login failed (${response.status})`;
+                showError(errorMsg);
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            showError('Network error. Please check your connection.');
+        }
+        
+        function showError(message) {
+            errorElement.textContent = message;
+            errorElement.classList.remove('d-none');
+            
+            // Reset button
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            
+            // Focus on password field for retry
+            document.getElementById('password').focus();
+            document.getElementById('password').select();
+        }
+    });
+    
+    // Clear error when user starts typing
+    document.getElementById('username').addEventListener('input', () => {
+        document.getElementById('errorMessage').classList.add('d-none');
+    });
+    
+    document.getElementById('password').addEventListener('input', () => {
+        document.getElementById('errorMessage').classList.add('d-none');
+    });
+</script>
 </body>
 </html>

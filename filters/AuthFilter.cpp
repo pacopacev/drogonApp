@@ -1,10 +1,22 @@
 #include "AuthFilter.h"
+#include <drogon/HttpResponse.h>
 
 void AuthFilter::doFilter(const drogon::HttpRequestPtr& req,
                           drogon::FilterCallback&& fcb,
                           drogon::FilterChainCallback&& fccb) {
     
     auto session = req->session();
+    std::string path = req->path();
+
+    if (path == "/") {
+        auto session = req->session();
+        if (session && session->find("user_id")) {
+            // Redirect logged-in users to dashboard
+            auto resp = drogon::HttpResponse::newRedirectionResponse("/dashboard");
+            fcb(resp);
+            return;
+        }
+    }
     
     // Public routes (no auth required)
     std::vector<std::string> publicRoutes = {
@@ -18,7 +30,7 @@ void AuthFilter::doFilter(const drogon::HttpRequestPtr& req,
         "/fonts/"
     };
     
-    std::string path = req->getPath();
+    // std::string path = req->getPath();
     
     // Check if route is public
     bool isPublic = false;

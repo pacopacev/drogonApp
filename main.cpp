@@ -7,10 +7,33 @@
 #include "controllers/AuthController.h"
 #include "filters/AuthFilter.h"
 #include "models/User.h"
+#include <fstream>
 
 using namespace drogon;
 
 int main() {
+
+
+
+    // Debug: Print loaded configuration
+    std::cout << "\n=== Configuration Summary ===" << std::endl;
+
+    // In your main() function, after loading config:
+
+// Debug: Print loaded configuration
+std::cout << "\n=== Configuration Summary ===" << std::endl;
+std::cout << "Document root: " << app().getDocumentRoot() << std::endl;
+std::cout << "Number of IO threads: " << app().getThreadNum() << std::endl;
+std::cout << "=============================" << std::endl;
+
+// Test if static files directory exists
+std::string docRoot = app().getDocumentRoot();
+if (docRoot.empty()) {
+    std::cout << "⚠ Warning: Document root is not set!" << std::endl;
+} else {
+    std::cout << "Document root: " << docRoot << std::endl; 
+}   
+    
     // Debug: Check if PostgreSQL is defined
     #ifdef USE_POSTGRESQL
         std::cout << "✓ USE_POSTGRESQL IS DEFINED!" << std::endl;
@@ -155,6 +178,62 @@ int main() {
             
             auto resp = HttpResponse::newHttpJsonResponse(json);
             callback(resp);
+        },
+        {Get});
+
+    // In main(), modify the dashboard route:
+    // In main.cpp, fix the dashboard route:
+    app().registerHandler("/dashboard",
+        [](const HttpRequestPtr& req,
+        std::function<void(const HttpResponsePtr&)>&& callback) {
+            try {
+                // Check if user is logged in
+                auto session = req->session();
+                bool isAuthenticated = false;
+                
+                if (session) {
+                    try {
+                        // Use try-catch because find() throws if key doesn't exist
+                        isAuthenticated = session->find("user_id");
+                    } catch (...) {
+                        // Key doesn't exist
+                        isAuthenticated = false;
+                    }
+                }
+                
+                if (!isAuthenticated) {
+                    // Redirect to login if not authenticated
+                    auto resp = HttpResponse::newRedirectionResponse("/login");
+                    callback(resp);
+                    return;
+                }
+                
+                std::string html = ViewLoader::loadView("dashboard");
+                auto resp = HttpResponse::newHttpResponse();
+                resp->setContentTypeCode(CT_TEXT_HTML);
+                resp->setBody(html);
+                callback(resp);
+            } catch (const std::exception& e) {
+                auto resp = HttpResponse::newHttpResponse();
+                resp->setStatusCode(k500InternalServerError);
+                resp->setBody("Error loading dashboard: " + std::string(e.what()));
+                callback(resp);
+            }
+        },
+        {Get});
+
+        app().registerHandler("/logout",
+        [](const HttpRequestPtr& req,
+        std::function<void(const HttpResponsePtr&)>&& callback) {
+            // Clear session and redirect to home
+            auto session = req->session();
+            if (session) {
+                session->erase("user_id");
+                session->erase("username");
+                session->erase("email");
+            }
+            auto resp = HttpResponse::newRedirectionResponse("/");
+            callback(resp);    
         },
         {Get});
 

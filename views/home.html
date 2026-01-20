@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drogon Web Server v1.9.11</title>
+    <title>Flowbit v1.0.0</title>
+
+    <!-- Bootstrap CSS -->
     <!-- Use absolute paths starting with / -->
+     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png">
+     <link rel="apple-touch-icon" href="/assets/favicon.png">
+     
+
     <link href="/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -27,6 +33,10 @@
             border-radius: 5px;
             margin: 5px 0;
         }
+        .nav-link {
+            font-weight: bold;
+            color: white !important;
+        }
     </style>
 </head>
 <body>
@@ -48,13 +58,18 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="/login">
+                        <a class="nav-link" href="/login">
                             <i class="bi bi-box-arrow-in-right"></i> Login
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/register">
                             <i class="bi bi-code-slash"></i> Register
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="bi bi-speedometer2"></i> Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
