@@ -11,6 +11,13 @@
       "sslmode": "require"
     }
   ],
+  "controllers": [
+    "AuthController"
+  ],
+  "filters": [
+    "AuthFilter"
+  ],
+  
   "listeners": [
     {
       "address": "0.0.0.0",
@@ -21,8 +28,7 @@
     "document_root": "./public",
     "threads_num": 4,
     "enable_session": true,
-    "session_timeout": 1800,
-    "upload_path": "./uploads",
+    "session_timeout": 30,
     "run_as_daemon": false,
     "client_max_body_size": 10485760,
     "client_max_memory_body_size": 10485760,
@@ -30,7 +36,8 @@
     "static_files_cache_time": 3600,
     "idle_connection_timeout": 60,
     "enable_gzip": true,
-    "gzip_static": true
+    "session_id_length": 32,
+    "session_same_site": "Lax" 
   },
   "ssl": {
     "cert": "",
@@ -71,4 +78,5 @@
     "txt": "text/plain"
   },
   "plugins": []
+  
 }

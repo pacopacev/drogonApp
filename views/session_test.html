@@ -1,0 +1,67 @@
+<!-- session_test.html in your public folder -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Session Expiry Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .info { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Session Expiry Test (30 seconds)</h1>
+    
+    <div class="info">
+        <button onclick="login()">Simulate Login</button>
+        <button onclick="checkSession()">Check Session</button>
+        <button onclick="gotoDashboard()">Go to Dashboard</button>
+    </div>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function login() {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({username: 'test', password: 'test'})
+            });
+            
+            const data = await response.json();
+            document.getElementById('result').innerHTML = 
+                '<pre>Login Response: ' + JSON.stringify(data, null, 2) + '</pre>';
+        }
+        
+        async function checkSession() {
+            const response = await fetch('/api/debug/session');
+            const data = await response.json();
+            
+            let html = '<pre>Session Info: ' + JSON.stringify(data, null, 2) + '</pre>';
+            
+            if (data.logged_in) {
+                html += `<p>✅ Logged in as user ${data.user_id}</p>`;
+                html += `<p>⏰ Session age: ${data.session_age}s (Expires in: ${data.time_remaining}s)</p>`;
+                
+                if (data.time_remaining <= 0) {
+                    html += `<p style="color:red">❌ SESSION EXPIRED!</p>`;
+                }
+            } else {
+                html += `<p>❌ Not logged in</p>`;
+            }
+            
+            document.getElementById('result').innerHTML = html;
+        }
+        
+        function gotoDashboard() {
+            window.location.href = '/dashboard';
+        }
+        
+        // Auto-check every 5 seconds
+        setInterval(checkSession, 5000);
+        
+        // Initial check
+        checkSession();
+    </script>
+</body>
+</html>

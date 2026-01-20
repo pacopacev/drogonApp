@@ -1,9 +1,13 @@
+// AuthFilter.h
 #pragma once
 #include <drogon/HttpFilter.h>
+#include <json/json.h>
 
-class AuthFilter : public drogon::HttpFilter<AuthFilter> {
+using namespace drogon;
+
+class AuthFilter : public HttpFilter<AuthFilter> {
 public:
-    void doFilter(const drogon::HttpRequestPtr& req,
-                  drogon::FilterCallback&& fcb,
-                  drogon::FilterChainCallback&& fccb) override;
+    virtual void doFilter(const HttpRequestPtr& req,
+                         FilterCallback&& fcb,
+                         FilterChainCallback&& fccb) override;
 };

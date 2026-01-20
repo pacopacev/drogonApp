@@ -77,47 +77,66 @@
         submitBtn.disabled = true;
         
         try {
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
+        const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    });
+    
+        const data = await response.json();
+        console.log('Response status:', response.status);
+        console.log('Response data:', data);
+    
+    if (response.status === 200 && data.success) {
+        // Successful login
+        console.log('✅ Login successful');
+        const urlParams = new URLSearchParams(window.location.search);
+        const returnUrl = urlParams.get('return');
+        const redirectTo = returnUrl || '/dashboard';
+        console.log('Redirecting to:', redirectTo);
             
-            // Check if response is JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Server returned non-JSON response');
-            }
-            
-            const data = await response.json();
-            console.log('Login response:', data);
-            
-            if (response.ok && (data.success === true && data.token)) {
-                // Login successful
-                // Optionally store token in localStorage
-                if (data.token) {
-                    localStorage.setItem('auth_token', data.token);
-                    sessionStorage.setItem('auth_token', data.token);
-                }
-                
-                if (data.user) {
-                    localStorage.setItem('user_data', JSON.stringify(data.user));
-                    sessionStorage.setItem('user_data', JSON.stringify(data.user));
-                }
-                
-                // Redirect to dashboard
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 300);
-            } else {
-                // Show error from server
-                const errorMsg = data.error || data.message || `Login failed (${response.status})`;
-                showError(errorMsg);
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            showError('Network error. Please check your connection.');
+            // Small delay for better UX
+            setTimeout(() => {
+                window.location.href = redirectTo;
+            }, 500);
+        // Store token if available
+        if (data.token) {
+            localStorage.setItem('auth_token', data.token);
         }
+        
+        // Store user data if available
+        if (data.user) {
+            localStorage.setItem('user_data', JSON.stringify(data.user));
+        }
+        
+        // Redirect to dashboard
+        window.location.href = '/dashboard';
+    } else {
+        // Failed login
+        console.log('❌ Login failed');
+        
+        // Get error message
+        const errorMsg = data.error || 
+                        data.message || 
+                        (response.status === 401 ? 'Invalid username or password' : 'Login failed');
+        
+        // Show error
+        const errorElement = document.getElementById('errorMessage');
+        errorElement.textContent = errorMsg;
+        errorElement.classList.remove('d-none');
+        
+        // Reset button
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        
+        // Focus password for retry
+        document.getElementById('password').focus();
+        document.getElementById('password').select();
+    }
+} catch (error) {
+    console.error('Network error:', error);
+    // ... error handling ...
+}
         
         function showError(message) {
             errorElement.textContent = message;

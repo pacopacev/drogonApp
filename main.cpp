@@ -1,3 +1,9 @@
+#include <cstdio>
+#include <chrono>
+#include <thread>
+
+
+#include "GlobalModel.h"
 #include <drogon/drogon.h>
 #include "drogon/HttpResponse.h"
 #include <string>
@@ -12,6 +18,27 @@
 using namespace drogon;
 
 int main() {
+
+    app().enableSession(30);
+    // DISABLE OUTPUT BUFFERING - ADD THIS
+    setvbuf(stdout, nullptr, _IONBF, 0);
+    setvbuf(stderr, nullptr, _IONBF, 0);
+
+    std::cout << "🚀 STARTING SERVER - BUFFERING DISABLED" << std::endl;
+
+    drogon::app().setLogLevel(trantor::Logger::kTrace);
+
+    // Add debug logging middleware
+    app().registerPreHandlingAdvice([](const HttpRequestPtr& req,
+                                       AdviceCallback&& acb,
+                                       AdviceChainCallback&& accb) {
+        // Use both cout and cerr
+        std::cout << "➡️ [" << std::time(nullptr) << "] " 
+                  << req->methodString() << " " << req->path() << std::endl;
+        std::cerr << "➡️ [" << std::time(nullptr) << "] " 
+                  << req->methodString() << " " << req->path() << std::endl;
+        accb();
+    });
 
 
 
@@ -102,6 +129,9 @@ if (docRoot.empty()) {
     app().registerHandler("/",
         [](const HttpRequestPtr& req,
            std::function<void(const HttpResponsePtr&)>&& callback) {
+
+            std::cout << "🟢 ROOT PATH '/' CALLED!" << std::endl;
+            std::cout.flush();  // <-- ADD THIS
             try {
                 std::string html = ViewLoader::loadView("home");
                 auto resp = HttpResponse::newHttpResponse();
@@ -186,41 +216,42 @@ if (docRoot.empty()) {
     app().registerHandler("/dashboard",
         [](const HttpRequestPtr& req,
         std::function<void(const HttpResponsePtr&)>&& callback) {
-            try {
-                // Check if user is logged in
-                auto session = req->session();
-                bool isAuthenticated = false;
+
+            auto session = req->session();
+            if (!session || !session->find("user_id")) {
+                auto resp = HttpResponse::newRedirectionResponse("/login?return=/dashboard");
+                callback(resp);
+                return;
+            }
+
+            try
+            {
+                std::string username = session->get<std::string>("username");
+                std::string firstLetter_of_username = username.front() ? std::string(1, username.front()) : "";
+                char firstLetter = GlobalModel::toUpper(firstLetter_of_username);
+                // std::cout << firstLetter << std::endl;
+                std::map<std::string, std::string> values;
+                values["username"] = username;
+                values["firstLetter"] = firstLetter;
                 
-                if (session) {
-                    try {
-                        // Use try-catch because find() throws if key doesn't exist
-                        isAuthenticated = session->find("user_id");
-                    } catch (...) {
-                        // Key doesn't exist
-                        isAuthenticated = false;
-                    }
-                }
+                std::string html = ViewLoader::loadViewWithData("dashboard", values);
                 
-                if (!isAuthenticated) {
-                    // Redirect to login if not authenticated
-                    auto resp = HttpResponse::newRedirectionResponse("/login");
-                    callback(resp);
-                    return;
-                }
-                
-                std::string html = ViewLoader::loadView("dashboard");
                 auto resp = HttpResponse::newHttpResponse();
                 resp->setContentTypeCode(CT_TEXT_HTML);
                 resp->setBody(html);
                 callback(resp);
-            } catch (const std::exception& e) {
+            }
+            catch(const std::exception& e)
+            {
                 auto resp = HttpResponse::newHttpResponse();
                 resp->setStatusCode(k500InternalServerError);
                 resp->setBody("Error loading dashboard: " + std::string(e.what()));
                 callback(resp);
             }
+            
+            
         },
-        {Get});
+        {Get}, {AuthFilter::classTypeName()}); // Protect with AuthFilter
 
         app().registerHandler("/logout",
         [](const HttpRequestPtr& req,
@@ -237,6 +268,20 @@ if (docRoot.empty()) {
         },
         {Get});
 
+        app().registerHandler("/api/test",
+    [](const HttpRequestPtr& req,
+       std::function<void(const HttpResponsePtr&)>&& callback) {
+        std::cout << "✅ /api/test endpoint hit!" << std::endl;
+        Json::Value json;
+        json["message"] = "Test endpoint working";
+        json["success"] = true;
+        auto resp = HttpResponse::newHttpJsonResponse(json);
+        callback(resp);
+    },
+    {Get, Post});
+
+
+
     std::cout << "✓ Routes configured" << std::endl;
 
     // ========== START SERVER ==========
@@ -248,6 +293,8 @@ if (docRoot.empty()) {
     std::cout << "Health check: http://localhost:8080/health" << std::endl;
     std::cout << "Press Ctrl+C to stop" << std::endl;
     std::cout << std::string(60, '=') << "\n" << std::endl;
+    
+    
     
     // Run the application
     app().run();

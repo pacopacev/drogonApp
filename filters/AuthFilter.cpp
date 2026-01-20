@@ -1,5 +1,8 @@
+// AuthFilter.cpp
 #include "AuthFilter.h"
 #include <drogon/HttpResponse.h>
+#include <drogon/utils/Utilities.h>
+#include <iostream>
 
 void AuthFilter::doFilter(const drogon::HttpRequestPtr& req,
                           drogon::FilterCallback&& fcb,
@@ -7,9 +10,14 @@ void AuthFilter::doFilter(const drogon::HttpRequestPtr& req,
     
     auto session = req->session();
     std::string path = req->path();
+    std::string method = req->methodString();
 
+    // Debug logging (optional)
+    // std::cout << "[" << method << "] " << path << " - Session: " 
+    //           << (session ? "Yes" : "No") << std::endl;
+
+    // ========== HOME PAGE REDIRECT ==========
     if (path == "/") {
-        auto session = req->session();
         if (session && session->find("user_id")) {
             // Redirect logged-in users to dashboard
             auto resp = drogon::HttpResponse::newRedirectionResponse("/dashboard");
@@ -18,19 +26,29 @@ void AuthFilter::doFilter(const drogon::HttpRequestPtr& req,
         }
     }
     
-    // Public routes (no auth required)
+    // ========== PUBLIC ROUTES ==========
     std::vector<std::string> publicRoutes = {
         "/api/login",
         "/api/register",
+        "/api/logout",  // Allow logout even if not authenticated
         "/",
-        "/login.html",
-        "/register.html",
+        "/login",
+        "/register",
+        "/logout",
         "/css/",
         "/js/",
-        "/fonts/"
+        "/fonts/",
+        "/assets/",
+        "/health",
+        "/api/health",
+        "/api/hello",
+        "/greet/",
+        "/api/test",
+        "/favicon.ico",
+        "/favicon.png",
+        "/robots.txt",
+        "/sitemap.xml"
     };
-    
-    // std::string path = req->getPath();
     
     // Check if route is public
     bool isPublic = false;
@@ -46,26 +64,50 @@ void AuthFilter::doFilter(const drogon::HttpRequestPtr& req,
         return;
     }
     
-    // Check if user is authenticated
+    // ========== CHECK AUTHENTICATION ==========
     if (!session || !session->find("user_id")) {
+        // Session expired or not logged in
+        
+        // Debug log
+        std::cout << "🔒 Access denied - Session expired for: " << path 
+                  << " (Method: " << method << ")" << std::endl;
+        
         auto resp = drogon::HttpResponse::newHttpResponse();
         
-        // For API requests, return JSON
+        // For API requests, return JSON with 401
         if (path.find("/api/") == 0) {
             Json::Value json;
-            json["error"] = "Not authenticated";
+            json["error"] = "Session expired";
+            json["message"] = "Please log in again";
+            json["redirect"] = "/login";
+            json["success"] = false;
             resp = drogon::HttpResponse::newHttpJsonResponse(json);
             resp->setStatusCode(drogon::k401Unauthorized);
         } 
-        // For web pages, redirect to login
+        // For web pages, redirect to login with return URL
         else {
             resp->setStatusCode(drogon::k302Found);
-            resp->addHeader("Location", "/login.html");
+            
+            // Encode the current path as return URL (except for login/register pages)
+            std::string returnUrl = "";
+            if (path != "/login" && path != "/register") {
+                returnUrl = "?return=" + drogon::utils::urlEncode(path);
+            }
+            
+            resp->addHeader("Location", "/login" + returnUrl);
         }
         
         fcb(resp);
         return;
     }
+    
+    // ========== USER IS AUTHENTICATED ==========
+    
+    // Optional: Log user access (for debugging)
+    // if (session->find("user_id")) {
+    //     std::cout << "✅ User " << session->get<int>("user_id") 
+    //               << " accessing: " << path << std::endl;
+    // }
     
     fccb(); // User is authenticated, continue
 }

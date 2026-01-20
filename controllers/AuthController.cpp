@@ -28,9 +28,22 @@ std::string generateToken() {
     return ss.str();
 }
 
+AuthController::AuthController() {
+    std::cout << "🚀 AuthController constructor called!" << std::endl;
+};
 void AuthController::asyncHandleHttpRequest(
     const HttpRequestPtr& req,
     std::function<void(const HttpResponsePtr&)>&& callback) {
+    
+    // ADD THIS DEBUG OUTPUT
+    std::cout << "========================================" << std::endl;
+    std::cout << "🔵 AuthController::asyncHandleHttpRequest CALLED!" << std::endl;
+    std::cout << "Path: " << req->path() << std::endl;
+    std::cout << "Method: " << req->methodString() << std::endl;
+    std::cout << "========================================\n" << std::endl;
+    
+    // Use both cout and cerr
+    std::cerr << "[AuthController] Handling: " << req->path() << std::endl;
     
     auto json = req->getJsonObject();
     auto dbClient = DatabaseConfig::getInstance().getClient();
@@ -229,36 +242,36 @@ void AuthController::asyncHandleHttpRequest(
         int userId = session->get<int>("user_id");
         
         dbClient->execSqlAsync(
-            "SELECT id, username, email FROM users WHERE id = $1",
-            [callback](const Result& r) {
-                if (r.empty()) {
-                    Json::Value respJson;
-                    respJson["error"] = "User not found";
-                    auto resp = HttpResponse::newHttpJsonResponse(respJson);
-                    resp->setStatusCode(k404NotFound);
-                    callback(resp);
-                    return;
-                }
-                
+        "SELECT id, username, email FROM users_drogon WHERE id = $1",  // users_drogon NOT users
+        [callback](const Result& r) {
+            if (r.empty()) {
                 Json::Value respJson;
-                Json::Value userJson;
-                userJson["id"] = r[0]["id"].as<int>();
-                userJson["username"] = r[0]["username"].as<std::string>();
-                userJson["email"] = r[0]["email"].as<std::string>();
-                respJson["user"] = userJson;
-                
+                respJson["error"] = "User not found";
                 auto resp = HttpResponse::newHttpJsonResponse(respJson);
+                resp->setStatusCode(k404NotFound);
                 callback(resp);
-            },
-            [callback](const DrogonDbException& e) {
-                Json::Value respJson;
-                respJson["error"] = "Database error";
-                auto resp = HttpResponse::newHttpJsonResponse(respJson);
-                resp->setStatusCode(k500InternalServerError);
-                callback(resp);
-            },
-            userId
-        );
+                return;
+            }
+            
+            Json::Value respJson;
+            Json::Value userJson;
+            userJson["id"] = r[0]["id"].as<int>();
+            userJson["username"] = r[0]["username"].as<std::string>();
+            userJson["email"] = r[0]["email"].as<std::string>();
+            respJson["user"] = userJson;
+            
+            auto resp = HttpResponse::newHttpJsonResponse(respJson);
+            callback(resp);
+        },
+        [callback](const DrogonDbException& e) {
+            Json::Value respJson;
+            respJson["error"] = "Database error: " + std::string(e.base().what());
+            auto resp = HttpResponse::newHttpJsonResponse(respJson);
+            resp->setStatusCode(k500InternalServerError);
+            callback(resp);
+        },
+        session->get<int>("user_id")  // This might throw!
+    );
     }
     
     // Unknown endpoint

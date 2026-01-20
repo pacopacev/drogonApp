@@ -2,13 +2,15 @@
 #pragma once
 #include <drogon/HttpSimpleController.h>
 
+using namespace drogon;
+
 class AuthController : public drogon::HttpSimpleController<AuthController> {
 public:
-    void asyncHandleHttpRequest(
-        const drogon::HttpRequestPtr& req,
-        std::function<void(const drogon::HttpResponsePtr&)>&& callback) override;
-
-
+    AuthController();
+    
+    virtual void asyncHandleHttpRequest(
+        const HttpRequestPtr& req,
+        std::function<void(const HttpResponsePtr&)>&& callback) override;
     
     PATH_LIST_BEGIN
     PATH_ADD("/api/register", drogon::Post);
@@ -17,8 +19,4 @@ public:
     PATH_ADD("/api/me", drogon::Get);
     PATH_ADD("/api/dashboard", drogon::Get);
     PATH_LIST_END
-
-private:
-    
-    // hashPassword(const std::string& password, const std::string& salt);    
 };
