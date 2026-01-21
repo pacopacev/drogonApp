@@ -19,6 +19,8 @@ using namespace drogon;
 
 int main() {
 
+    
+
     app().enableSession(30);
     // DISABLE OUTPUT BUFFERING - ADD THIS
     setvbuf(stdout, nullptr, _IONBF, 0);
@@ -45,7 +47,7 @@ int main() {
     // Debug: Print loaded configuration
     std::cout << "\n=== Configuration Summary ===" << std::endl;
 
-    // In your main() function, after loading config:
+  
 
 // Debug: Print loaded configuration
 std::cout << "\n=== Configuration Summary ===" << std::endl;
@@ -268,21 +270,35 @@ if (docRoot.empty()) {
         },
         {Get});
 
-        app().registerHandler("/api/test",
+        // Add after other routes in main.cpp
+app().registerHandler("/test-auth",
     [](const HttpRequestPtr& req,
        std::function<void(const HttpResponsePtr&)>&& callback) {
-        std::cout << "✅ /api/test endpoint hit!" << std::endl;
+        
+        std::cout << "🔍 Testing AuthController..." << std::endl;
         Json::Value json;
-        json["message"] = "Test endpoint working";
-        json["success"] = true;
+        json["message"] = "AuthController test";
+        json["expected_endpoints"] = Json::arrayValue;
+        json["expected_endpoints"].append("POST /api/register");
+        json["expected_endpoints"].append("POST /api/login");
+        json["expected_endpoints"].append("POST /api/logout");
+        json["expected_endpoints"].append("GET /api/me");
+        json["expected_endpoints"].append("GET /api/dashboard");
+        
         auto resp = HttpResponse::newHttpJsonResponse(json);
         callback(resp);
     },
-    {Get, Post});
+    {Get});
+
+        
 
 
 
     std::cout << "✓ Routes configured" << std::endl;
+
+
+
+    
 
     // ========== START SERVER ==========
     std::cout << "\n" << std::string(60, '=') << std::endl;
@@ -296,7 +312,9 @@ if (docRoot.empty()) {
     
     
     
-    // Run the application
+
+    
+
     app().run();
     
     return 0;

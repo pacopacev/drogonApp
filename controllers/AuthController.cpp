@@ -29,8 +29,8 @@ std::string generateToken() {
 }
 
 AuthController::AuthController() {
-    std::cout << "🚀 AuthController constructor called!" << std::endl;
-};
+    std::cout << "✅ AuthController instantiated" << std::endl;
+}
 void AuthController::asyncHandleHttpRequest(
     const HttpRequestPtr& req,
     std::function<void(const HttpResponsePtr&)>&& callback) {
