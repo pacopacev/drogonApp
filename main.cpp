@@ -134,6 +134,9 @@ if (docRoot.empty()) {
 
             std::cout << "🟢 ROOT PATH '/' CALLED!" << std::endl;
             std::cout.flush();  // <-- ADD THIS
+
+            
+         
             try {
                 std::string html = ViewLoader::loadView("home");
                 auto resp = HttpResponse::newHttpResponse();
@@ -153,6 +156,9 @@ if (docRoot.empty()) {
     app().registerHandler("/login",
         [](const HttpRequestPtr& req,
            std::function<void(const HttpResponsePtr&)>&& callback) {
+
+          
+
             try {
                 std::string html = ViewLoader::loadView("login");
                 auto resp = HttpResponse::newHttpResponse();
@@ -296,8 +302,22 @@ app().registerHandler("/test-auth",
 
     std::cout << "✓ Routes configured" << std::endl;
 
-
-
+    
+    // ========== END ROUTES ==========
+    // ========== SETUP CONTROLLERS ==========
+    std::cout << "\nStep 5: Setting up controllers..." << std::endl;
+    
+    // Create and register AuthController
+    auto authController = std::make_shared<AuthController>();
+    app().registerController(authController);
+    
+    std::cout << "✓ AuthController registered" << std::endl;
+    std::cout << "  Available endpoints:" << std::endl;
+    std::cout << "  - POST /api/register" << std::endl;
+    std::cout << "  - POST /api/login" << std::endl;
+    std::cout << "  - POST /api/logout" << std::endl;
+    std::cout << "  - GET  /api/me" << std::endl;
+    std::cout << "  - GET  /api/dashboard (API)" << std::endl;
     
 
     // ========== START SERVER ==========
@@ -309,6 +329,7 @@ app().registerHandler("/test-auth",
     std::cout << "Health check: http://localhost:8080/health" << std::endl;
     std::cout << "Press Ctrl+C to stop" << std::endl;
     std::cout << std::string(60, '=') << "\n" << std::endl;
+    
     
     
     
